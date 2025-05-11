@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ice Puzzle Game</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #111;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #info {
+      margin: 10px;
+      font-size: 18px;
+    }
+    #game-container {
+      width: 100vw;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+    #game {
+      display: grid;
+      grid-template-columns: repeat(20, 30px);
+      grid-auto-rows: 30px;
+      gap: 1px;
+      margin: 0 auto;
+      touch-action: none;
+    }
+    .tile {
+      width: 30px;
+      height: 30px;
+    }
+    .wall { background: #555; }
+    .floor { background: #ccc; }
+    .player { background: lime; }
+    .goal { background: gold; }
+    #restart {
+      display: none;
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="info">
+    Moves: <span id="moveCounter">0</span> | Time: <span id="timer">0.0</span>s
+  </div>
+  <div id="game-container">
+    <div id="game"></div>
+  </div>
+  <button id="restart">Try Again</button>
+
+  <script>
+    const mapData = [
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1],
+      [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+      [1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
+      [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    ];
+
+    const game = document.getElementById("game");
+    const moveCounter = document.getElementById("moveCounter");
+    const timerDisplay = document.getElementById("timer");
+    const restartBtn = document.getElementById("restart");
+
+    let player = { x: 1, y: 1 };
+    let moves = 0;
+    let startTime = null;
+    let timerInterval = null;
+
+    function render() {
+      game.innerHTML = "";
+      mapData.forEach((row, y) => {
+        row.forEach((tile, x) => {
+          const div = document.createElement("div");
+          div.className = "tile " + (
+            tile === 1 ? "wall" :
+            tile === 3 ? "goal" :
+            (x === player.x && y === player.y) ? "player" :
+            "floor"
+          );
+          game.appendChild(div);
+        });
+      });
+    }
+
+    function startTimer() {
+      if (startTime !== null) return;
+      startTime = Date.now();
+      timerInterval = setInterval(() => {
+        timerDisplay.textContent = ((Date.now() - startTime) / 1000).toFixed(1);
+      }, 100);
+    }
+
+    function movePlayer(dx, dy) {
+      startTimer();
+      let nextX = player.x;
+      let nextY = player.y;
+
+      while (true) {
+        const newX = nextX + dx;
+        const newY = nextY + dy;
+        if (mapData[newY][newX] === 1) break;
+        nextX = newX;
+        nextY = newY;
+      }
+
+      if (nextX !== player.x || nextY !== player.y) {
+        player.x = nextX;
+        player.y = nextY;
+        moves++;
+        moveCounter.textContent = moves;
+        render();
+
+        if (mapData[player.y][player.x] === 3) {
+          clearInterval(timerInterval);
+          restartBtn.style.display = "block";
+        }
+      }
+    }
+
+    function handleSwipe(startX, startY, endX, endY) {
+      const dx = endX - startX;
+      const dy = endY - startY;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        movePlayer(dx > 0 ? 1 : -1, 0);
+      } else {
+        movePlayer(0, dy > 0 ? 1 : -1);
+      }
+    }
+
+    // Touch handling
+    let touchStartX, touchStartY;
+    window.addEventListener("touchstart", e => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    });
+
+    window.addEventListener("touchend", e => {
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
+    });
+
+    restartBtn.addEventListener("click", () => {
+      player = { x: 1, y: 1 };
+      moves = 0;
+      moveCounter.textContent = "0";
+      clearInterval(timerInterval);
+      timerDisplay.textContent = "0.0";
+      startTime = null;
+      restartBtn.style.display = "none";
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
